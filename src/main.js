@@ -14,6 +14,10 @@
 
 import { Actor } from 'apify';
 import { PlaywrightCrawler, log } from 'crawlee';
+import { chromium } from 'playwright-extra';
+import StealthPlugin from 'puppeteer-extra-plugin-stealth';
+
+chromium.use(StealthPlugin());
 
 await Actor.init();
 
@@ -50,10 +54,10 @@ const normalizeProjectName = (projectName) => projectName
     ?.replace(/^coming\s+soon:\s*/i, '')
     ?.trim() ?? null;
 
-// ---------- Proxy ----------
-const proxyConfiguration = proxyConfig
-    ? await Actor.createProxyConfiguration(proxyConfig)
-    : undefined;
+// ---------- Proxy (default to residential for anti-bot bypass) ----------
+const proxyConfiguration = await Actor.createProxyConfiguration(
+    proxyConfig ?? { useApifyProxy: true, apifyProxyGroups: ['RESIDENTIAL'] },
+);
 
 // ---------- PPE: Check charging mode ----------
 const chargingManager = Actor.getChargingManager();
@@ -64,6 +68,15 @@ if (isPPE) {
     log.info('Running in Pay Per Event mode. Event: "project-scraped" ($0.01)');
 }
 
+// ---------- Locator helper with short timeout ----------
+const LOCATOR_TIMEOUT = 5000;
+
+const safeTextContent = (locator) =>
+    locator.first().textContent({ timeout: LOCATOR_TIMEOUT }).then((t) => t?.trim()).catch(() => null);
+
+const safeGetAttribute = (locator, attr) =>
+    locator.first().getAttribute(attr, { timeout: LOCATOR_TIMEOUT }).catch(() => null);
+
 // ---------- Crawler ----------
 const crawler = new PlaywrightCrawler({
     proxyConfiguration,
@@ -71,6 +84,7 @@ const crawler = new PlaywrightCrawler({
     navigationTimeoutSecs: Math.ceil(waitForSelectorTimeout / 1000),
     requestHandlerTimeoutSecs: 120,
     maxRequestRetries: 3,
+    launcher: chromium,
     launchContext: {
         launchOptions: {
             args: [
@@ -93,6 +107,28 @@ const crawler = new PlaywrightCrawler({
 
         // Give React/Next.js a moment to hydrate
         await page.waitForTimeout(3000);
+
+        // ------------------------------------------------------------------
+        // Anti-bot detection: check if we landed on a challenge page
+        // ------------------------------------------------------------------
+        const blocked = await page.evaluate(() => {
+            const title = document.title?.toLowerCase() ?? '';
+            const body = document.body?.innerText?.toLowerCase() ?? '';
+            if (title.includes('just a moment') || title.includes('attention required')) return 'cloudflare';
+            if (body.includes('verify you are human') || body.includes('enable javascript and cookies')) return 'challenge';
+            if (document.querySelector('#challenge-running, #challenge-form, .cf-browser-verification')) return 'cloudflare-dom';
+            return null;
+        });
+
+        if (blocked) {
+            const kvStore = await Actor.openKeyValueStore();
+            const screenshot = await page.screenshot({ fullPage: true });
+            await kvStore.setValue('BLOCKED-PAGE', screenshot, { contentType: 'image/png' });
+            const html = await page.content();
+            await kvStore.setValue('BLOCKED-HTML', html, { contentType: 'text/html' });
+            log.warning(`Anti-bot challenge detected (${blocked}). Screenshot saved to key-value store as BLOCKED-PAGE.`);
+            throw new Error(`Blocked by anti-bot protection: ${blocked}. Check BLOCKED-PAGE in key-value store for screenshot.`);
+        }
 
         const result = {
             url: request.url,
@@ -209,15 +245,14 @@ const crawler = new PlaywrightCrawler({
             result.projectName = await page
                 .locator('h2[class*="project-name"], h1[class*="project-name"], [data-test-id="project-name"], .project-name, meta[property="og:title"]')
                 .first()
-                .evaluate((el) => el.tagName === 'META' ? el.content : el.textContent?.trim())
+                .evaluate((el) => el.tagName === 'META' ? el.content : el.textContent?.trim(), { timeout: LOCATOR_TIMEOUT })
                 .catch(() => null);
         }
 
         if (!result.projectName) {
-            result.projectName = await page
-                .locator('meta[property="og:title"]')
-                .getAttribute('content')
-                .catch(() => null);
+            result.projectName = await safeGetAttribute(
+                page.locator('meta[property="og:title"]'), 'content',
+            );
         }
 
         const titleCreator = await page
@@ -370,19 +405,15 @@ const crawler = new PlaywrightCrawler({
         if (!result.creatorName && metadataCreatorName) {
             result.creatorName = metadataCreatorName;
         } else if (!result.creatorName) {
-            result.creatorName = await page
-                .locator('[data-test-id="creator-name"], [data-test-id="creator-info"] a, [class*="creator"] a, .creator-name a')
-                .first()
-                .textContent()
-                .then((t) => t?.trim())
-                .catch(() => null);
+            result.creatorName = await safeTextContent(
+                page.locator('[data-test-id="creator-name"], [data-test-id="creator-info"] a, [class*="creator"] a, .creator-name a'),
+            );
         }
 
         if (!result.description) {
-            result.description = await page
-                .locator('meta[property="og:description"]')
-                .getAttribute('content')
-                .catch(() => null);
+            result.description = await safeGetAttribute(
+                page.locator('meta[property="og:description"]'), 'content',
+            );
         }
 
         const metadataCategory = await page
@@ -416,12 +447,9 @@ const crawler = new PlaywrightCrawler({
             } else if (mainCategory) {
                 result.category = mainCategory;
             } else {
-                result.category = await page
-                    .locator('a[href*="/discover/categories/"]')
-                    .first()
-                    .textContent()
-                    .then((t) => t?.trim())
-                    .catch(() => null);
+                result.category = await safeTextContent(
+                    page.locator('a[href*="/discover/categories/"]'),
+                );
             }
         }
 
@@ -467,12 +495,9 @@ const crawler = new PlaywrightCrawler({
         // Strategy 4: Live project backer/funding data from DOM
         // ------------------------------------------------------------------
         if (!result.backerCount) {
-            const backerText = await page
-                .locator('[data-test-id="backers-count"], [class*="backers"] .count, #backers_count')
-                .first()
-                .textContent()
-                .then((t) => t?.trim())
-                .catch(() => null);
+            const backerText = await safeTextContent(
+                page.locator('[data-test-id="backers-count"], [class*="backers"] .count, #backers_count'),
+            );
 
             if (backerText) {
                 const parsed = parseInt(backerText.replace(/[^0-9]/g, ''), 10);
@@ -484,12 +509,9 @@ const crawler = new PlaywrightCrawler({
         // Location fallback
         // ------------------------------------------------------------------
         if (!result.location) {
-            result.location = await page
-                .locator('[class*="location"], [data-test-id="project-location"]')
-                .first()
-                .textContent()
-                .then((t) => t?.trim())
-                .catch(() => null);
+            result.location = await safeTextContent(
+                page.locator('[class*="location"], [data-test-id="project-location"]'),
+            );
         }
 
         result.projectName = normalizeProjectName(result.projectName);
@@ -512,8 +534,18 @@ const crawler = new PlaywrightCrawler({
         log.info('Data pushed to dataset. PPE event "project-scraped" charged (if PPE mode).');
     },
 
-    failedRequestHandler({ request }, error) {
+    async failedRequestHandler({ request, page }, error) {
         log.error(`Request ${request.url} failed: ${error.message}`);
+        if (page) {
+            try {
+                const kvStore = await Actor.openKeyValueStore();
+                const screenshot = await page.screenshot({ fullPage: true });
+                await kvStore.setValue('FAILED-PAGE', screenshot, { contentType: 'image/png' });
+                log.info('Failure screenshot saved to key-value store as FAILED-PAGE.');
+            } catch (e) {
+                log.warning(`Could not capture failure screenshot: ${e.message}`);
+            }
+        }
     },
 });
 
