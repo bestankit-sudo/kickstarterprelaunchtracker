@@ -1,0 +1,16 @@
+{
+    "actorSpecification": 1,
+    "name": "kickstarter-prelaunch-tracker",
+    "title": "Kickstarter Pre-Launch Follower Tracker",
+    "version": "1.0",
+    "buildTag": "latest",
+    "meta": {
+        "templateId": "js-crawlee-playwright-chrome"
+    },
+    "defaultMemoryMbytes": 1024,
+    "minMemoryMbytes": 512,
+    "maxMemoryMbytes": 4096,
+    "dockerfile": "../Dockerfile",
+    "readme": "../README.md",
+    "input": "./input_schema.json"
+}

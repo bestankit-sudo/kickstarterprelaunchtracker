@@ -1,0 +1,33 @@
+{
+    "title": "Kickstarter Pre-Launch Follower Tracker",
+    "description": "Track the \"Notify Me\" follower count and project details from any Kickstarter pre-launch page. Perfect for monitoring your campaign's pre-launch growth daily.",
+    "type": "object",
+    "schemaVersion": 1,
+    "properties": {
+        "url": {
+            "title": "Kickstarter Project URL",
+            "type": "string",
+            "description": "URL of the Kickstarter project page (pre-launch or live). Accepts both pre-launch pages and standard project URLs.\n\nExample: https://www.kickstarter.com/projects/creator-name/project-name",
+            "editor": "textfield",
+            "prefill": "https://www.kickstarter.com/projects/magmirror/magmirror-create-professional-content-with-your-smartphone"
+        },
+        "waitForSelectorTimeout": {
+            "title": "Page Load Timeout (ms)",
+            "type": "integer",
+            "description": "Maximum time in milliseconds to wait for the page to render. Increase if you experience timeout errors on slow connections.",
+            "default": 30000,
+            "minimum": 5000,
+            "maximum": 120000,
+            "editor": "number"
+        },
+        "proxyConfiguration": {
+            "title": "Proxy Configuration",
+            "type": "object",
+            "description": "Proxy settings for the browser. Residential proxies are recommended for best stability with Kickstarter.",
+            "editor": "proxy",
+            "sectionCaption": "Advanced Settings",
+            "sectionDescription": "Configure proxy and timeout settings for more reliable scraping."
+        }
+    },
+    "required": ["url"]
+}
