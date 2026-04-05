@@ -84,8 +84,8 @@ const crawler = new PlaywrightCrawler({
     navigationTimeoutSecs: Math.ceil(waitForSelectorTimeout / 1000),
     requestHandlerTimeoutSecs: 120,
     maxRequestRetries: 3,
-    launcher: chromium,
     launchContext: {
+        launcher: chromium,
         launchOptions: {
             args: [
                 '--disable-gpu',
