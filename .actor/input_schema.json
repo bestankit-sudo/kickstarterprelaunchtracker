@@ -9,7 +9,7 @@
             "type": "string",
             "description": "URL of the Kickstarter project page (pre-launch or live). Accepts both pre-launch pages and standard project URLs.\n\nExample: https://www.kickstarter.com/projects/creator-name/project-name",
             "editor": "textfield",
-            "prefill": "https://www.kickstarter.com/projects/magmirror/magmirror-create-professional-content-with-your-smartphone"
+            "prefill": "https://www.kickstarter.com/projects/flacodev/the-running-dev-become-the-smartest-and-the-most-paid-dev"
         },
         "waitForSelectorTimeout": {
             "title": "Page Load Timeout (ms)",

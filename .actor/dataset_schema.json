@@ -9,47 +9,119 @@
         "projectName": {
             "type": "string",
             "title": "Project Name",
-            "description": "The name/title of the Kickstarter project"
+            "description": "Name of the Kickstarter project",
+            "nullable": true
         },
         "creatorName": {
             "type": "string",
             "title": "Creator Name",
-            "description": "Name of the project creator"
+            "description": "Name of the project creator",
+            "nullable": true
         },
         "category": {
             "type": "string",
             "title": "Category",
-            "description": "The project's Kickstarter category (e.g., Technology, Design)"
+            "description": "Project category",
+            "nullable": true
         },
         "subcategory": {
             "type": "string",
             "title": "Subcategory",
-            "description": "The project's Kickstarter subcategory if available"
+            "description": "Project subcategory",
+            "nullable": true
         },
         "description": {
             "type": "string",
             "title": "Description",
-            "description": "The project's blurb/short description"
+            "description": "Short description of the project",
+            "nullable": true
         },
         "followerCount": {
             "type": "integer",
             "title": "Follower Count",
-            "description": "Number of people who clicked 'Notify Me' (null if < 10 followers, as Kickstarter hides the count)"
+            "description": "Number of followers (Notify Me count) for pre-launch projects",
+            "nullable": true
         },
         "location": {
             "type": "string",
             "title": "Location",
-            "description": "Creator's listed location"
+            "description": "Project or creator location",
+            "nullable": true
         },
         "backerCount": {
             "type": "integer",
             "title": "Backer Count",
-            "description": "Number of backers (available for live/completed projects)"
+            "description": "Number of backers for live projects",
+            "nullable": true
         },
         "scrapedAt": {
             "type": "string",
             "title": "Scraped At",
-            "description": "ISO 8601 timestamp of when the data was collected"
+            "description": "ISO timestamp of when the data was scraped"
+        }
+    },
+    "views": {
+        "overview": {
+            "title": "Overview",
+            "transformation": {
+                "fields": [
+                    "url",
+                    "projectName",
+                    "creatorName",
+                    "category",
+                    "subcategory",
+                    "description",
+                    "followerCount",
+                    "location",
+                    "backerCount",
+                    "scrapedAt"
+                ]
+            },
+            "display": {
+                "component": "table",
+                "properties": {
+                    "url": {
+                        "label": "Project URL",
+                        "format": "text"
+                    },
+                    "projectName": {
+                        "label": "Project Name",
+                        "format": "text"
+                    },
+                    "creatorName": {
+                        "label": "Creator Name",
+                        "format": "text"
+                    },
+                    "category": {
+                        "label": "Category",
+                        "format": "text"
+                    },
+                    "subcategory": {
+                        "label": "Subcategory",
+                        "format": "text"
+                    },
+                    "description": {
+                        "label": "Description",
+                        "format": "text"
+                    },
+                    "followerCount": {
+                        "label": "Follower Count",
+                        "format": "number"
+                    },
+                    "location": {
+                        "label": "Location",
+                        "format": "text"
+                    },
+                    "backerCount": {
+                        "label": "Backer Count",
+                        "format": "number"
+                    },
+                    "scrapedAt": {
+                        "label": "Scraped At",
+                        "format": "text"
+                    }
+                }
+            }
         }
     }
 }
