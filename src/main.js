@@ -160,7 +160,7 @@ const crawler = new PlaywrightCrawler({
             creatorName: null,
             category: null,
             subcategory: null,
-            description: null,
+            projectDescription: null,
             followerCount: null,
             location: null,
             backerCount: null,
@@ -219,7 +219,7 @@ const crawler = new PlaywrightCrawler({
                         result.creatorName = project.creator?.name ?? null;
                         result.category = project.category?.name ?? project.category?.parentCategory?.name ?? null;
                         result.subcategory = project.category?.parentCategory?.name ?? null;
-                        result.description = project.blurb ?? project.description ?? null;
+                        result.projectDescription = project.blurb ?? project.description ?? null;
                         result.followerCount = project.watchesCount ?? project.prelaunchFollowerCount ?? null;
                         result.location = project.location?.displayableName ?? project.location?.name ?? null;
                         result.backerCount = project.backersCount ?? null;
@@ -246,7 +246,7 @@ const crawler = new PlaywrightCrawler({
                             project.category?.name ??
                             project.category_name ??
                             null;
-                        result.description = project.blurb ?? project.description ?? null;
+                        result.projectDescription = project.blurb ?? project.description ?? null;
                         result.followerCount = project.watchesCount ?? project.prelaunchFollowerCount ?? null;
                         result.location =
                             project.location?.displayableName ??
@@ -451,8 +451,8 @@ const crawler = new PlaywrightCrawler({
             );
         }
 
-        if (!result.description) {
-            result.description = await safeGetAttribute(
+        if (!result.projectDescription) {
+            result.projectDescription = await safeGetAttribute(
                 page.locator('meta[property="og:description"]'), 'content',
             );
         }

@@ -69,7 +69,7 @@ Returns all project details including counts.
 | `creatorName` | Creator's name |
 | `category` | Primary category (e.g., Technology, Design) |
 | `subcategory` | Subcategory if available |
-| `description` | Project blurb / short description |
+| `projectDescription` | Project blurb / short description |
 | `followerCount` | **"Notify Me" count** (null if < 10, as Kickstarter hides it) |
 | `location` | Creator's listed location |
 | `backerCount` | Number of backers (live/completed projects) |
@@ -82,7 +82,7 @@ Returns all project details including counts.
     "creatorName": "Awesome Creator",
     "category": "Technology",
     "subcategory": "Gadgets",
-    "description": "A revolutionary modular storage system for coffee pods and beans.",
+    "projectDescription": "A revolutionary modular storage system for coffee pods and beans.",
     "followerCount": 847,
     "location": "San Francisco, CA",
     "backerCount": null,

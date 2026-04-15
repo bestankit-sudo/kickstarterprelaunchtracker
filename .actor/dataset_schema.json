@@ -1,5 +1,6 @@
 {
     "actorSpecification": 1,
+    "description": "Dataset schema for Kickstarter Pre-Launch Follower Tracker output",
     "fields": {
         "url": {
             "type": "string",
@@ -30,7 +31,7 @@
             "description": "Project subcategory",
             "nullable": true
         },
-        "description": {
+        "projectDescription": {
             "type": "string",
             "title": "Description",
             "description": "Short description of the project",
@@ -70,7 +71,7 @@
                     "creatorName",
                     "category",
                     "subcategory",
-                    "description",
+                    "projectDescription",
                     "followerCount",
                     "location",
                     "backerCount",
@@ -100,7 +101,7 @@
                         "label": "Subcategory",
                         "format": "text"
                     },
-                    "description": {
+                    "projectDescription": {
                         "label": "Description",
                         "format": "text"
                     },
