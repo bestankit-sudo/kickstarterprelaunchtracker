@@ -4,6 +4,15 @@
     "type": "object",
     "schemaVersion": 1,
     "properties": {
+        "dataScope": {
+            "title": "Data Scope",
+            "type": "string",
+            "description": "Choose what data to fetch.\n\n- **Count only ($0.02)** — Just follower/backer counts. Lightweight and fast.\n- **Full details ($0.05)** — All project details including name, creator, category, description, location, and counts.",
+            "editor": "select",
+            "default": "full",
+            "enum": ["count", "full"],
+            "enumTitles": ["Count only ($0.02)", "Full details ($0.05)"]
+        },
         "url": {
             "title": "Kickstarter Project URL",
             "type": "string",

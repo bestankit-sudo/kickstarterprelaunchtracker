@@ -8,8 +8,9 @@
  * Works with both pre-launch pages and live campaign pages.
  * Uses Playwright for client-side rendered content.
  *
- * Monetization: Pay Per Event (PPE) at $0.01 per successful scrape.
- * The charge is triggered via Actor.pushData(result, 'project-scraped').
+ * Monetization: Pay Per Event (PPE) with two tiers:
+ *   - "count-only" ($0.02): follower/backer counts only (lightweight, blocks images/fonts/CSS)
+ *   - "project-scraped" ($0.05): full project details
  */
 
 import { Actor } from 'apify';
@@ -25,9 +26,12 @@ await Actor.init();
 const input = await Actor.getInput() ?? {};
 const {
     url,
+    dataScope = 'full',
     waitForSelectorTimeout = 30000,
     proxyConfiguration: proxyConfig,
 } = input;
+
+const isCountOnly = dataScope === 'count';
 
 if (!url) {
     throw new Error(
@@ -65,7 +69,9 @@ const pricingInfo = chargingManager.getPricingInfo();
 const isPPE = pricingInfo.isPayPerEvent;
 
 if (isPPE) {
-    log.info('Running in Pay Per Event mode. Event: "project-scraped" ($0.01)');
+    const eventName = isCountOnly ? 'count-only' : 'project-scraped';
+    const eventPrice = isCountOnly ? '$0.02' : '$0.05';
+    log.info(`Running in Pay Per Event mode. Event: "${eventName}" (${eventPrice})`);
 }
 
 // ---------- Locator helper with short timeout ----------
@@ -98,15 +104,33 @@ const crawler = new PlaywrightCrawler({
     async requestHandler({ page, request }) {
         log.info(`Scraping ${request.url}`);
 
-        // Wait for the main content to render
-        await page.waitForLoadState('networkidle', {
-            timeout: waitForSelectorTimeout,
-        }).catch(() => {
-            log.warning('networkidle timed out — continuing with current state');
-        });
+        // In count-only mode, block heavy resources to minimize data transfer
+        if (isCountOnly) {
+            await page.route('**/*', (route) => {
+                const type = route.request().resourceType();
+                if (['image', 'font', 'stylesheet', 'media'].includes(type)) {
+                    return route.abort();
+                }
+                return route.continue();
+            });
 
-        // Give React/Next.js a moment to hydrate
-        await page.waitForTimeout(3000);
+            // Wait only for the JSON data element instead of full page render
+            await page.waitForSelector('#__NEXT_DATA__', {
+                timeout: waitForSelectorTimeout,
+            }).catch(() => {
+                log.warning('__NEXT_DATA__ not found — falling back to DOM scraping');
+            });
+        } else {
+            // Full mode: wait for complete page render
+            await page.waitForLoadState('networkidle', {
+                timeout: waitForSelectorTimeout,
+            }).catch(() => {
+                log.warning('networkidle timed out — continuing with current state');
+            });
+
+            // Give React/Next.js a moment to hydrate
+            await page.waitForTimeout(3000);
+        }
 
         // ------------------------------------------------------------------
         // Anti-bot detection: check if we landed on a challenge page
@@ -236,6 +260,23 @@ const crawler = new PlaywrightCrawler({
             } catch (e) {
                 log.warning(`Error parsing structured data: ${e.message}`);
             }
+        }
+
+        // ------------------------------------------------------------------
+        // Count-only mode: return early with just the counts
+        // ------------------------------------------------------------------
+        if (isCountOnly && result.followerCount !== null) {
+            const countResult = {
+                url: request.url,
+                followerCount: result.followerCount,
+                backerCount: result.backerCount,
+                scrapedAt: new Date().toISOString(),
+            };
+
+            log.info('Count-only mode — extracted:', countResult);
+            await Actor.pushData(countResult, 'count-only');
+            log.info('Data pushed to dataset. PPE event "count-only" charged (if PPE mode).');
+            return;
         }
 
         // ------------------------------------------------------------------
@@ -519,6 +560,23 @@ const crawler = new PlaywrightCrawler({
         // ------------------------------------------------------------------
         // Push results + charge PPE event
         // ------------------------------------------------------------------
+
+        // Count-only fallback: if JSON extraction didn't find counts,
+        // DOM scraping above may have found them
+        if (isCountOnly) {
+            const countResult = {
+                url: request.url,
+                followerCount: result.followerCount,
+                backerCount: result.backerCount,
+                scrapedAt: new Date().toISOString(),
+            };
+
+            log.info('Count-only mode — extracted:', countResult);
+            await Actor.pushData(countResult, 'count-only');
+            log.info('Data pushed to dataset. PPE event "count-only" charged (if PPE mode).');
+            return;
+        }
+
         log.info('Extracted data:', {
             projectName: result.projectName,
             creatorName: result.creatorName,
@@ -526,11 +584,7 @@ const crawler = new PlaywrightCrawler({
             followerCount: result.followerCount,
         });
 
-        // The second argument 'project-scraped' is the PPE event name.
-        // In PPE mode: triggers a $0.01 charge per successful scrape.
-        // Outside PPE mode (local / free users): event name is ignored.
         await Actor.pushData(result, 'project-scraped');
-
         log.info('Data pushed to dataset. PPE event "project-scraped" charged (if PPE mode).');
     },
 

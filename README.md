@@ -36,7 +36,31 @@ To track follower growth over time:
 
 ## Output format
 
-Each run produces a single record with these fields:
+Output depends on the **Data Scope** you select:
+
+### Count only (`count`)
+
+Lightweight — returns just the counts. Fast and cheap.
+
+| Field | Description |
+|-------|-------------|
+| `url` | The Kickstarter project URL |
+| `followerCount` | **"Notify Me" count** (null if < 10, as Kickstarter hides it) |
+| `backerCount` | Number of backers (live/completed projects) |
+| `scrapedAt` | ISO 8601 timestamp of the scrape |
+
+```json
+{
+    "url": "https://www.kickstarter.com/projects/creator/awesome-product",
+    "followerCount": 847,
+    "backerCount": null,
+    "scrapedAt": "2026-03-04T10:30:00.000Z"
+}
+```
+
+### Full details (`full`)
+
+Returns all project details including counts.
 
 | Field | Description |
 |-------|-------------|
@@ -50,8 +74,6 @@ Each run produces a single record with these fields:
 | `location` | Creator's listed location |
 | `backerCount` | Number of backers (live/completed projects) |
 | `scrapedAt` | ISO 8601 timestamp of the scrape |
-
-### Example output (pre-launch)
 
 ```json
 {
@@ -72,6 +94,7 @@ Each run produces a single record with these fields:
 
 | Parameter | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|
+| `dataScope` | string | No | `full` | `count` for counts only ($0.02), `full` for all details ($0.05) |
 | `url` | string | Yes | — | Kickstarter project URL |
 | `waitForSelectorTimeout` | integer | No | 30000 | Page load timeout in ms |
 | `proxyConfiguration` | object | No | — | Proxy settings (residential recommended) |
@@ -85,7 +108,12 @@ Each run produces a single record with these fields:
 
 ## Cost
 
-Pricing is **$0.05 per request**.
+Pricing is **Pay Per Event** based on the data scope you choose:
+
+| Data Scope | Price | What you get |
+|------------|-------|-------------|
+| Count only | $0.02/request | Follower + backer counts |
+| Full details | $0.05/request | All project details + counts |
 
 ## Technical details
 
